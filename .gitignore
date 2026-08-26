@@ -6,6 +6,7 @@ node_modules/
 
 # Secrets
 .env
+.env.example
 
 # SQLite database (created at runtime, contains user data)
 server/data.db
