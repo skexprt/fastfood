@@ -1,0 +1,68 @@
+[
+    {
+        "id": 1,
+        "name": "Burger",
+        "price": 50.00,
+        "category": "Fast Food",
+        "image": "images/burger.png"
+    },
+    {
+        "id": 2,
+        "name": "Pizza",
+        "price": 80.00,
+        "category": "Fast Food",
+        "image": "images/pizza.png"
+        
+    },
+    {
+        "id": 3,
+        "name": "Fried Chicken",
+        "price": 70.00,
+        "category": "Fast Food",
+        "image": "images/fried-chicken.png"
+
+
+    },
+    {
+        "id": 4,
+        "name": "Chicken Roll",
+        "price": 50.00,
+        "category": "Fast Food",
+        "image": "images/chicken-roll.png"
+    },
+    {
+        "id": 5,
+        "name": "Sub Sandwich",
+        "price": 45.00,
+        "category": "Fast Food",
+        "image": "images/sandwich.png"
+    },
+    {
+        "id": 6,
+        "name": "Chicken lasagna",
+        "price": 55.00,
+        "category": "Fast Food",
+        "image": "images/lasagna.png"
+    },
+    {
+        "id": 7,
+        "name": "Itallian Spaghetti",
+        "price": 60.00,
+        "category": "Fast Food",
+        "image": "images/spaghetti.png"
+    },
+    {
+        "id": 8,
+        "name": "Spring Roll",
+        "price": 30.00,
+        "category": "Fast Food",
+        "image": "images/spring-roll.png"
+    },
+    {
+        "id": 9,
+        "name": "Chicken lasagna",
+        "price": 25.00,
+        "category": "Fast Food",
+        "image": "images/lasagna.png"
+    }
+]

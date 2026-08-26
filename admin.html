@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FastFood — Admin</title>
+
+    <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.0/css/all.min.css" />
+    <link rel="stylesheet" href="style1.css">
+    <script defer src="admin.js"></script>
+
+    <style>
+        .admin-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .admin-nav .admin-nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .admin-main {
+            padding-block: 2rem 5rem;
+        }
+
+        .admin-card {
+            padding: 1.5rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* Login gate */
+        .admin-login {
+            display: flex;
+            justify-content: center;
+            padding-top: 3rem;
+        }
+
+        .admin-login .admin-card {
+            width: min(28rem, 100%);
+        }
+
+        .admin-login h2 {
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .admin-hint {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Dashboard grid */
+        .admin-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 22rem) minmax(0, 1fr);
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+            align-items: start;
+        }
+
+        .admin-sub {
+            color: var(--text-muted);
+            font-size: 1rem;
+            margin-top: 0.25rem;
+        }
+
+        /* Forms */
+        #adminLoginForm,
+        #productForm {
+            display: flex;
+            flex-direction: column;
+            gap: 0.9rem;
+        }
+
+        .admin-card label {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .admin-card input {
+            padding: 0.7rem 0.9rem;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        .admin-card input:focus {
+            border-color: var(--primary);
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .btn.ghost {
+            background: transparent;
+            color: var(--text);
+            border: 1px solid var(--border);
+            box-shadow: none;
+        }
+
+        .btn.ghost:hover {
+            background: var(--surface-soft);
+        }
+
+        .admin-error {
+            min-height: 1.2rem;
+            color: #dc2626;
+            font-size: 0.9rem;
+        }
+
+        /* Table */
+        .table-wrap {
+            overflow-x: auto;
+            margin-top: 1rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 0.7rem 0.6rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.95rem;
+            vertical-align: middle;
+        }
+
+        th {
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+        }
+
+        td .thumb {
+            width: 44px;
+            height: 44px;
+            border-radius: 8px;
+            object-fit: cover;
+            background: var(--primary-soft);
+        }
+
+        .row-actions {
+            display: flex;
+            gap: 0.4rem;
+        }
+
+        .icon-btn {
+            width: 34px;
+            height: 34px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--surface);
+            cursor: pointer;
+            color: var(--text);
+            transition: all var(--transition);
+        }
+
+        .icon-btn:hover {
+            background: var(--surface-soft);
+            transform: translateY(-1px);
+        }
+
+        .icon-btn.danger:hover {
+            background: #fee2e2;
+            color: #dc2626;
+            border-color: #fecaca;
+        }
+
+        @media screen and (max-width: 820px) {
+            .admin-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <nav class="navbar admin-nav wrapper">
+            <a href="index.html" class="logo">FastFood.</a>
+            <div class="admin-nav-actions">
+                <a href="index.html" class="btn ghost"><i class="fa-solid fa-arrow-left"></i> &nbsp;Back to store</a>
+                <a href="#" id="logoutBtn" class="btn hidden"><i class="fa-solid fa-right-from-bracket"></i>
+                    &nbsp;Logout</a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="wrapper admin-main">
+        <!-- Login gate -->
+        <section id="adminLogin" class="admin-login hidden">
+            <div class="admin-card">
+                <h2>Admin Login</h2>
+                <p class="admin-hint">Sign in with an admin account to manage the menu.</p>
+                <form id="adminLoginForm" autocomplete="off">
+                    <input type="email" id="adminEmail" placeholder="Email" required>
+                    <input type="password" id="adminPassword" placeholder="Password" required>
+                    <button class="btn" type="submit">Sign in</button>
+                    <p class="admin-error" id="loginError"></p>
+                </form>
+            </div>
+        </section>
+
+        <!-- Dashboard -->
+        <section id="adminDashboard" class="hidden">
+            <div>
+                <h2 class="section-title">Product Management</h2>
+                <p class="admin-sub" id="welcome"></p>
+            </div>
+
+            <div class="admin-grid">
+                <!-- Add / edit form -->
+                <form id="productForm" class="admin-card" autocomplete="off">
+                    <h3 id="formTitle">Add New Product</h3>
+                    <label>Name
+                        <input id="pName" required placeholder="e.g. Veg Burger">
+                    </label>
+                    <label>Price (₹)
+                        <input id="pPrice" type="number" min="0" step="0.01" required placeholder="50">
+                    </label>
+                    <label>Category
+                        <input id="pCategory" value="Fast Food">
+                    </label>
+                    <label>Image path or URL
+                        <input id="pImage" placeholder="images/burger.png">
+                    </label>
+                    <div class="form-actions">
+                        <button class="btn" type="submit" id="saveBtn">Add Product</button>
+                        <button class="btn ghost hidden" type="button" id="cancelEdit">Cancel</button>
+                    </div>
+                    <p class="admin-error" id="formError"></p>
+                </form>
+
+                <!-- Products table -->
+                <div class="admin-card table-card">
+                    <h3>All Products (<span id="count">0</span>)</h3>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>Name</th>
+                                    <th>Price</th>
+                                    <th>Category</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="productRows"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+</body>
+
+</html>
