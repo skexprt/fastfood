@@ -2,22 +2,22 @@
 
 A full-stack food-ordering web application: browse a menu, register/sign in, add items to a cart, pay through **Razorpay**, and view your order history. Includes a role-based **admin panel** for managing the menu.
 
-Built with a **Node.js + Express** REST API, a **SQLite** database, **JWT authentication** with **bcrypt** password hashing, and **server-verified Razorpay payments** (test mode). The frontend is vanilla HTML/CSS/JavaScript served by the same server, so the whole app runs from a single `npm start`.
+Built with a **Node.js + Express** REST API, **PostgreSQL**, **JWT authentication** with **bcrypt** password hashing, and server-verified Razorpay payments. The frontend is vanilla HTML/CSS/JavaScript served by the same server.
 
-> **Payments run in Razorpay TEST mode** — no real money is charged. Add your own free Razorpay test keys to enable the live checkout flow (see [Setup](#-setup)).
+> Configure Razorpay test credentials first. Do not enable live payments until the deployment, payment capture settings, HTTPS, and webhook/reconciliation procedures have been reviewed.
 
 ---
 
 ## ✨ Features
 
-- **Menu** loaded from a REST API backed by SQLite (11 seeded products).
+- **Menu** loaded from PostgreSQL, with search and category filters.
 - **Authentication** — register & log in with real password hashing (bcrypt) and stateless **JWT** sessions that persist across reloads.
 - **Cart** — add/remove items, adjust quantities, live total (persisted in `localStorage`).
-- **Checkout with Razorpay** — the server creates the order and **verifies the payment signature (HMAC-SHA256)** before saving it. The order total is **recomputed server-side** from trusted DB prices, so the client can't tamper with the amount.
+- **Checkout with Razorpay** — the server prices the cart from trusted DB records, verifies the payment signature, and confirms the captured payment amount/currency before marking an order paid.
 - **Order history** — each user sees their past orders with line items.
 - **Admin panel** (`admin.html`) — role-gated dashboard to **add / edit / delete** products. Changes appear in the store immediately.
 - **Role-based UI** — the admin link only shows for admin accounts.
-- **Security-minded static serving** — only whitelisted files are served, so `.env` and the database file are never reachable over HTTP.
+- **Security controls** — CSP/security headers, origin allowlisting, request limits, route-specific rate limits, strict input validation, and an explicit static-file allowlist.
 
 ---
 
@@ -26,17 +26,17 @@ Built with a **Node.js + Express** REST API, a **SQLite** database, **JWT authen
 | Layer     | Technology                                             |
 | --------- | ------------------------------------------------------ |
 | Backend   | Node.js, Express                                       |
-| Database  | SQLite (`better-sqlite3`)                              |
+| Database  | PostgreSQL (`pg`)                                      |
 | Auth      | JSON Web Tokens (`jsonwebtoken`), `bcryptjs`           |
 | Payments  | Razorpay SDK (order creation + HMAC signature verify)  |
 | Frontend  | Vanilla HTML, CSS, JavaScript (Swiper for the slider)  |
-| Config    | `dotenv`, `cors`                                       |
+| Config    | `dotenv`, `cors`, `helmet`, `express-rate-limit`       |
 
 ---
 
 ## 🚀 Setup
 
-**Prerequisites:** [Node.js](https://nodejs.org/) 18 or newer (includes npm).
+**Prerequisites:** [Node.js](https://nodejs.org/) 18 or newer and a PostgreSQL database.
 
 1. **Install dependencies**
 
@@ -44,28 +44,27 @@ Built with a **Node.js + Express** REST API, a **SQLite** database, **JWT authen
    npm install
    ```
 
-2. **Create your environment file** — copy the example and fill it in:
+2. **Create your environment file** — copy the example and replace every placeholder:
 
    ```bash
-   cp .env.example .env
+   copy .env.example .env
    ```
 
-   | Variable             | Description                                           |
-   | -------------------- | ----------------------------------------------------- |
-   | `PORT`               | Server port (default `3000`)                          |
-   | `JWT_SECRET`         | Any long random string used to sign tokens            |
-   | `ADMIN_EMAIL`        | Email for the auto-seeded admin account               |
-   | `ADMIN_PASSWORD`     | Password for the auto-seeded admin account            |
-   | `RAZORPAY_KEY_ID`    | Your Razorpay **test** key id (optional)              |
-   | `RAZORPAY_KEY_SECRET`| Your Razorpay **test** key secret (optional)          |
+   Set `DATABASE_URL`, a unique random `JWT_SECRET` (at least 32 characters), and a valid `ADMIN_EMAIL` plus an `ADMIN_PASSWORD` (16–72 UTF-8 bytes). `DATABASE_SSL=disable` is intended only for local PostgreSQL; production connections verify TLS certificates by default. Set `CORS_ORIGINS` only when hosting a separate frontend, and list exact trusted origins separated by commas. Set `TRUST_PROXY=true` only when requests pass through one trusted reverse proxy.
 
-3. **Run the server**
+3. **Create the schema and initial admin/menu**
+
+   ```bash
+   npm run db:seed
+   ```
+
+4. **Start the server**
 
    ```bash
    npm start
    ```
 
-   Open **http://localhost:3000**. On first run the database is created and seeded automatically (11 products + one admin account).
+   Open **http://localhost:3000**. Do not open `index.html` directly: sign-in, menu, and checkout need the running API. The health/readiness endpoint is **http://localhost:3000/api/health** and should return `{"status":"ok"}` before signing in.
 
    For development with auto-restart on file changes:
 
@@ -73,16 +72,11 @@ Built with a **Node.js + Express** REST API, a **SQLite** database, **JWT authen
    npm run dev
    ```
 
-### Default admin login
+### Admin login
 
-The app seeds an admin account from your `.env` on its first run. Use it to open the admin panel at **http://localhost:3000/admin.html**:
+The seed command creates the admin account from `ADMIN_EMAIL` and `ADMIN_PASSWORD`. Use those credentials at **http://localhost:3000/admin.html**. The password is not reset when the seed script runs again.
 
-```
-Email:    admin@fastfood.com
-Password: the `ADMIN_PASSWORD` value you set in `.env`
-```
-
-> Set a strong `ADMIN_PASSWORD` in `.env` before the first startup. The server will refuse to create an admin account with a missing password.
+> Use a unique password manager-generated admin password. Keep `.env` out of source control.
 
 ### Enabling payments (Razorpay TEST mode)
 
@@ -106,6 +100,7 @@ All request/response bodies are JSON. Protected routes require an `Authorization
 | POST   | `/api/auth/signup` | —    | `{ name, email, password }` | Register; returns `{token,user}`|
 | POST   | `/api/auth/login`  | —    | `{ email, password }`       | Log in; returns `{token,user}`  |
 | GET    | `/api/auth/me`     | User | —                           | Current user from token         |
+| GET    | `/api/health`      | —    | —                           | Database-backed readiness check |
 
 ### Products
 
@@ -121,7 +116,7 @@ All request/response bodies are JSON. Protected routes require an `Authorization
 | Method | Endpoint              | Auth | Body                                                                          | Description                                   |
 | ------ | --------------------- | ---- | ----------------------------------------------------------------------------- | --------------------------------------------- |
 | POST   | `/api/payment/order`  | User | `{ items: [{ id, quantity }] }`                                               | Create a Razorpay order (amount priced server-side) |
-| POST   | `/api/payment/verify` | User | `{ razorpay_order_id, razorpay_payment_id, razorpay_signature, items }`       | Verify signature and save the order           |
+| POST   | `/api/payment/verify` | User | `{ razorpay_order_id, razorpay_payment_id, razorpay_signature }`              | Verify signature and captured payment, then save the order |
 
 ### Orders
 
@@ -133,7 +128,7 @@ All request/response bodies are JSON. Protected routes require an `Authorization
 
 ## 🗄 Database Schema
 
-SQLite file at `server/data.db`, created and seeded on first run.
+PostgreSQL schema created by `npm run db:seed`; the same command seeds the menu and initial admin account.
 
 - **users** — `id, name, email (unique), password_hash, role ('user' | 'admin'), created_at`
 - **products** — `id, name, price, category, image, created_at`
@@ -144,12 +139,14 @@ SQLite file at `server/data.db`, created and seeded on first run.
 
 ## 🔒 Security Notes
 
-- Passwords are hashed with **bcrypt** — plaintext passwords are never stored.
-- Sessions use signed **JWTs**; the client only ever holds a token, never credentials.
-- **Payment amounts are recomputed on the server** from DB prices — the client cannot change what it's charged.
-- Razorpay **payment signatures are verified** with HMAC-SHA256 before an order is recorded.
-- Static file serving uses an **explicit whitelist**, so `.env`, `server/data.db`, and other server files are never exposed over HTTP.
-- Secrets and the database are **git-ignored** (`.env`, `*.db`, `node_modules`).
+- Passwords are hashed asynchronously with **bcrypt** — plaintext passwords are never stored.
+- Sessions use signed **JWTs**; use HTTPS in production and protect browser storage against XSS.
+- Cart values and quantities are validated and totals are recomputed from database prices.
+- Razorpay signatures, provider-side captured status, currency, and amount are verified before an order is marked paid.
+- **Helmet** security headers/CSP, exact CORS origin allowlisting, JSON body limits, and API/auth/payment rate limits are enabled.
+- Static file serving uses an **explicit whitelist**, so `.env`, database credentials, and server files are not exposed over HTTP.
+- The default rate-limit store is in-memory and per process. Configure a shared store before running multiple app instances.
+- Use a managed PostgreSQL backup/restore plan and rotate all secrets independently for production.
 
 ---
 
@@ -159,9 +156,9 @@ SQLite file at `server/data.db`, created and seeded on first run.
 FastFood/
 ├── server/
 │   ├── index.js      Express app: API routes + static frontend
-│   ├── db.js         SQLite connection, schema, first-run seeding
+│   ├── db.pg.js      PostgreSQL pool and schema
+│   ├── seed-pg.js    Initial schema, menu, and admin setup
 │   ├── auth.js       JWT sign/verify + auth & admin guards
-│   └── data.db       SQLite database (auto-created, git-ignored)
 ├── index.html        Store front (menu, cart, auth modal, orders)
 ├── main.js           Frontend logic (API calls, cart, auth, checkout)
 ├── admin.html        Admin dashboard
@@ -175,12 +172,13 @@ FastFood/
 
 ---
 
-## 🌱 Possible Next Steps
+## 🚀 Production checklist
 
-- Deploy to a host (e.g. Render/Railway) with a persistent volume for SQLite.
-- Add product search & category filters.
-- Order status tracking (preparing → out for delivery → delivered).
-- Move JWTs to httpOnly cookies for stronger XSS protection.
+- Put the app behind HTTPS and configure the trusted proxy setting for your host.
+- Use a managed PostgreSQL database with verified TLS, backups, and migrations.
+- Configure a shared rate-limit store for multiple instances and monitor health/error logs.
+- Configure Razorpay webhooks and reconciliation before accepting live payments.
+- Add legal pages, delivery coverage, support details, and real customer-approved review content before public launch.
 
 ---
 

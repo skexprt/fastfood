@@ -1,17 +1,19 @@
 {
   "name": "fastfood",
   "version": "1.0.0",
-  "description": "Full-stack food delivery app — Node + Express + SQLite, JWT auth, Razorpay payments, admin panel",
+  "description": "Production-minded food ordering app — Node, Express, PostgreSQL, JWT auth, Razorpay payments, admin panel",
   "type": "commonjs",
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
-    "dev": "node --watch server/index.js"
+    "dev": "node --watch server/index.js",
+    "db:seed": "node server/seed-pg.js",
+    "check": "node --check server/index.js && node --check server/db.pg.js && node --check server/seed-pg.js && node --check main.js && node --check admin.js"
   },
   "keywords": [
     "fullstack",
     "express",
-    "sqlite",
+    "postgresql",
     "jwt",
     "razorpay",
     "food-delivery"
@@ -20,11 +22,12 @@
   "license": "MIT",
   "dependencies": {
     "bcryptjs": "^2.4.3",
-    "better-sqlite3": "^11.8.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "express-rate-limit": "^8.7.1",
     "google-auth-library": "^11.0.2",
+    "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.23.0",
     "razorpay": "^2.9.5"

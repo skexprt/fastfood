@@ -4,16 +4,24 @@
  * ========================================================================= */
 
 // ---- Reviews slider ----
-var swiper = new Swiper(".mySwiper", {
-  navigation: { nextEl: "#Next", prevEl: "#Prev" },
-});
+if (window.Swiper) {
+  new Swiper(".mySwiper", {
+    navigation: { nextEl: "#Next", prevEl: "#Prev" },
+  });
+}
 
 // =========================================================================
 // API helpers
 // =========================================================================
 const API = ""; // same origin (server serves this page)
 
-const getToken = () => localStorage.getItem("ff_token");
+const getToken = () => {
+  try {
+    return localStorage.getItem("ff_token");
+  } catch {
+    return null;
+  }
+};
 const getUser = () => {
   try {
     return JSON.parse(localStorage.getItem("ff_user"));
@@ -22,29 +30,61 @@ const getUser = () => {
   }
 };
 const setAuth = (token, user) => {
-  localStorage.setItem("ff_token", token);
-  localStorage.setItem("ff_user", JSON.stringify(user));
+  try {
+    localStorage.setItem("ff_token", token);
+    localStorage.setItem("ff_user", JSON.stringify(user));
+    return true;
+  } catch (error) {
+    console.error("Could not save the sign-in session:", error);
+    showToast("Browser storage is unavailable. Please enable storage and try again.", "error");
+    return false;
+  }
 };
 const clearAuth = () => {
-  localStorage.removeItem("ff_token");
-  localStorage.removeItem("ff_user");
+  try {
+    localStorage.removeItem("ff_token");
+    localStorage.removeItem("ff_user");
+  } catch (error) {
+    console.error("Could not clear the saved session:", error);
+  }
 };
 
 /** Fetch wrapper: JSON in/out, adds Bearer token when auth=true, throws on !ok. */
 async function apiFetch(path, { method = "GET", body, auth = false } = {}) {
+  if (window.location.protocol === "file:") {
+    throw new Error(
+      "Sign-in needs the FastFood server. Run `npm start`, then open http://localhost:3000 instead of opening index.html directly.",
+    );
+  }
+
   const headers = { "Content-Type": "application/json" };
   if (auth) {
     const t = getToken();
     if (t) headers.Authorization = "Bearer " + t;
   }
-  const res = await fetch(API + path, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  let res;
+  try {
+    res = await fetch(API + path, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch {
+    throw new Error(
+      "Cannot reach the FastFood server. Run `npm start` in the project folder and open http://localhost:3000.",
+    );
+  }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const err = new Error(data.error || `Request failed (${res.status})`);
+    if (auth && res.status === 401) {
+      clearAuth();
+      updateUIForLogin();
+    }
+    const message =
+      res.status >= 500
+        ? "The server could not complete your request. Check the server logs and database at /api/health."
+        : data.error || `Request failed (${res.status})`;
+    const err = new Error(message);
     err.status = res.status; // let callers distinguish auth (401/403) from transient errors
     throw err;
   }
@@ -69,28 +109,80 @@ const ordersBtn = document.querySelector("#ordersBtn");
 const ordersTab = document.querySelector(".orders-tab");
 const ordersList = document.querySelector(".orders-list");
 const ordersCloseBtn = document.querySelector(".orders-close-btn");
+const toast = document.getElementById("appToast");
+const drawerFocusReturn = new WeakMap();
+
+function showToast(message, type = "info") {
+  if (!toast) {
+    window.alert(message);
+    return;
+  }
+  toast.textContent = message;
+  toast.dataset.type = type;
+  toast.setAttribute("role", type === "error" ? "alert" : "status");
+  toast.classList.add("toast-visible");
+  clearTimeout(showToast.timeout);
+  showToast.timeout = setTimeout(() => toast.classList.remove("toast-visible"), 4000);
+}
+
+function safeImageUrl(value) {
+  if (typeof value !== "string") return "images/burger.png";
+  if (/^\/?images\/[A-Za-z0-9._/-]+$/.test(value) && !value.includes("..")) {
+    return value.replace(/^\/+/, "");
+  }
+  try {
+    const url = new URL(value, window.location.origin);
+    if (url.protocol === "https:" && !url.username && !url.password) return url.href;
+  } catch {
+    return "images/burger.png";
+  }
+  return "images/burger.png";
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 
 // =========================================================================
 // Cart / Orders panel open + close
 // =========================================================================
+function setDrawerOpen(drawer, open) {
+  if (!drawer) return;
+  const otherDrawer = drawer === cartTab ? ordersTab : cartTab;
+  if (open && otherDrawer?.classList.contains("cart-tab-active")) {
+    setDrawerOpen(otherDrawer, false);
+  }
+  if (open) drawerFocusReturn.set(drawer, document.activeElement);
+  drawer.classList.toggle("cart-tab-active", open);
+  drawer.setAttribute("aria-hidden", String(!open));
+  drawer.inert = !open;
+  if (open) drawer.querySelector("button, a")?.focus();
+  else drawerFocusReturn.get(drawer)?.focus?.();
+}
+
 cartIcon.addEventListener("click", (e) => {
   e.preventDefault();
-  cartTab.classList.add("cart-tab-active");
+  setDrawerOpen(cartTab, true);
 });
 closeBtn.addEventListener("click", (e) => {
   e.preventDefault();
-  cartTab.classList.remove("cart-tab-active");
+  setDrawerOpen(cartTab, false);
 });
 
 if (ordersBtn && ordersTab) {
   ordersBtn.addEventListener("click", (e) => {
     e.preventDefault();
-    ordersTab.classList.add("cart-tab-active");
+    setDrawerOpen(ordersTab, true);
     loadOrders();
   });
   ordersCloseBtn.addEventListener("click", (e) => {
     e.preventDefault();
-    ordersTab.classList.remove("cart-tab-active");
+    setDrawerOpen(ordersTab, false);
   });
 }
 
@@ -98,10 +190,12 @@ if (ordersBtn && ordersTab) {
 function closeMobileMenu() {
   if (!mobileMenu) return;
   mobileMenu.classList.remove("mobile-menu-active");
+  hamburger?.setAttribute("aria-expanded", "false");
   if (menuIcon) {
     menuIcon.classList.remove("fa-xmark");
     menuIcon.classList.add("fa-bars");
   }
+  hamburger?.setAttribute("aria-label", "Open navigation menu");
 }
 
 if (hamburger && mobileMenu && menuIcon) {
@@ -109,6 +203,16 @@ if (hamburger && mobileMenu && menuIcon) {
     e.preventDefault();
     e.stopPropagation();
     mobileMenu.classList.toggle("mobile-menu-active");
+    hamburger.setAttribute(
+      "aria-expanded",
+      String(mobileMenu.classList.contains("mobile-menu-active")),
+    );
+    hamburger.setAttribute(
+      "aria-label",
+      mobileMenu.classList.contains("mobile-menu-active")
+        ? "Close navigation menu"
+        : "Open navigation menu",
+    );
     if (menuIcon.classList.contains("fa-bars")) {
       menuIcon.classList.remove("fa-bars");
       menuIcon.classList.add("fa-xmark");
@@ -135,9 +239,50 @@ if (hamburger && mobileMenu && menuIcon) {
 // Cart state
 // =========================================================================
 let productList = [];
-let cartproducts = JSON.parse(localStorage.getItem("ff_cart")) || [];
+function loadStoredCart() {
+  try {
+    const stored = JSON.parse(localStorage.getItem("ff_cart") || "[]");
+    if (!Array.isArray(stored)) return [];
+    const itemsById = new Map();
+    stored.forEach((item) => {
+      if (
+        !item ||
+        !Number.isInteger(Number(item.id)) ||
+        Number(item.id) <= 0 ||
+        !Number.isInteger(Number(item.quantity)) ||
+        Number(item.quantity) <= 0
+      ) {
+        return;
+      }
+      const id = Number(item.id);
+      const quantity = Math.min(
+        20,
+        (itemsById.get(id) || 0) + Number(item.quantity),
+      );
+      itemsById.set(id, quantity);
+    });
+    return [...itemsById.entries()]
+      .slice(0, 50)
+      .map(([id, quantity]) => ({ id, quantity }));
+  } catch {
+    return [];
+  }
+}
+let cartproducts = loadStoredCart();
 
-const saveCart = () => localStorage.setItem("ff_cart", JSON.stringify(cartproducts));
+const saveCart = () => {
+  try {
+    localStorage.setItem(
+      "ff_cart",
+      JSON.stringify(
+        cartproducts.map(({ id, quantity }) => ({ id, quantity })),
+      ),
+    );
+  } catch (error) {
+    console.error("Could not save the cart:", error);
+    showToast("Your cart could not be saved on this device.", "error");
+  }
+};
 
 // currency formatter for ₹ Indian Rupee
 const rupee = new Intl.NumberFormat("en-IN", {
@@ -149,16 +294,30 @@ const rupee = new Intl.NumberFormat("en-IN", {
 // ---- Render product cards from the API ----
 const showCards = () => {
   cardList.innerHTML = "";
-  productList.forEach((product) => {
+  const search = document.getElementById("menuSearch")?.value.trim().toLowerCase();
+  const category = document.getElementById("categoryFilter")?.value || "";
+  const visibleProducts = productList.filter((product) => {
+    const matchesSearch =
+      !search ||
+      `${product.name} ${product.category}`.toLowerCase().includes(search);
+    return matchesSearch && (!category || product.category === category);
+  });
+  if (!visibleProducts.length) {
+    cardList.innerHTML =
+      '<p class="menu-empty" role="status">No dishes match your search. Try another item or category.</p>';
+    return;
+  }
+  visibleProducts.forEach((product) => {
     const orderCard = document.createElement("div");
     orderCard.classList.add("order-card");
     orderCard.innerHTML = `
         <div class="card-item">
-         <img src="${product.image}" alt="${product.name}">
+         <img src="${safeImageUrl(product.image)}" alt="${escapeHtml(product.name)}" loading="lazy" decoding="async">
         </div>
-        <h4>${product.name}</h4>
+        <h4>${escapeHtml(product.name)}</h4>
+        <p class="product-category">${escapeHtml(product.category)}</p>
         <h4 class="price">${rupee.format(product.price)}</h4>
-        <button type="button" class="btn card-btn">Add to Cart</button>`;
+        <button type="button" class="btn card-btn" aria-label="Add ${escapeHtml(product.name)} to cart">Add to Cart</button>`;
     cardList.appendChild(orderCard);
 
     const cardBtn = orderCard.querySelector(".card-btn");
@@ -173,34 +332,52 @@ const showCards = () => {
 const addToCart = (product) => {
   const existingProduct = cartproducts.find((item) => item.id === product.id);
   if (existingProduct) {
+    if (existingProduct.quantity >= 20) {
+      showToast("You can order up to 20 of each dish.", "error");
+      return;
+    }
     existingProduct.quantity++;
   } else {
+    if (cartproducts.length >= 50) {
+      showToast("Your cart has reached its item limit.", "error");
+      return;
+    }
     cartproducts.push({ ...product, quantity: 1 });
   }
   saveCart();
   renderCart();
   updateCartCount();
+  showToast(`${product.name} added to your cart.`, "success");
 };
 
 // ---- Render cart ----
 function renderCart() {
   cartList.innerHTML = "";
-  cartproducts.forEach((item) => {
+  if (!cartproducts.length) {
+    cartList.innerHTML =
+      '<p class="cart-empty" role="status">Your cart is empty. Add a few favorites to get started.</p>';
+  }
+  const readyItems = cartproducts.filter((item) => Number.isFinite(item.price));
+  if (cartproducts.length && !readyItems.length) {
+    cartList.innerHTML =
+      '<p class="cart-empty" role="status">Your saved cart will be available when the menu loads.</p>';
+  }
+  readyItems.forEach((item) => {
     const cardItem = document.createElement("div");
     cardItem.classList.add("cart-item");
     cardItem.innerHTML = `
       <div class="item-image ">
-         <img src="${item.image}" alt="${item.name}">
+         <img src="${safeImageUrl(item.image)}" alt="${escapeHtml(item.name)}" loading="lazy">
       </div>
       <div class="item-details">
         <div class="item-info">
-          <h4>${item.name}</h4>
+          <h4>${escapeHtml(item.name)}</h4>
           <p class="item-total"> ${rupee.format(item.price * item.quantity)}</p>
         </div>
         <div class="quantity-control">
-          <button class="decrease-btn minus">-</button>
-          <span class="quantity-value">${item.quantity}</span>
-          <button class="increase-btn plus">+</button>
+          <button type="button" class="decrease-btn minus" aria-label="Remove one ${escapeHtml(item.name)}">−</button>
+          <span class="quantity-value" aria-live="polite">${item.quantity}</span>
+          <button type="button" class="increase-btn plus" aria-label="Add one ${escapeHtml(item.name)}">+</button>
         </div>
       </div> `;
 
@@ -210,6 +387,10 @@ function renderCart() {
     const priceEl = cardItem.querySelector(".item-total");
 
     increaseBtn.addEventListener("click", () => {
+      if (item.quantity >= 20) {
+        showToast("You can order up to 20 of each dish.", "error");
+        return;
+      }
       item.quantity++;
       quantityValue.textContent = item.quantity;
       priceEl.textContent = rupee.format(item.price * item.quantity);
@@ -238,8 +419,13 @@ function renderCart() {
 }
 
 function updateTotal() {
-  let total = 0;
-  cartproducts.forEach((item) => (total += item.price * item.quantity));
+  const total = cartproducts.reduce(
+    (sum, item) =>
+      Number.isFinite(item.price)
+        ? sum + item.price * item.quantity
+        : sum,
+    0,
+  );
   cartTotal.textContent = rupee.format(total);
 }
 
@@ -247,17 +433,49 @@ function updateCartCount() {
   let totalItems = 0;
   cartproducts.forEach((item) => (totalItems += item.quantity));
   cartCount.textContent = totalItems;
+  cartIcon.setAttribute(
+    "aria-label",
+    `Open shopping cart, ${totalItems} ${totalItems === 1 ? "item" : "items"}`,
+  );
 }
 
 // ---- Boot: load products from the API ----
 const initApp = async () => {
   try {
     productList = await apiFetch("/api/products");
+    const productsById = new Map(
+      productList.map((product) => [Number(product.id), product]),
+    );
+    cartproducts = cartproducts
+      .filter((item) => productsById.has(item.id))
+      .map((item) => ({
+        ...productsById.get(item.id),
+        quantity: item.quantity,
+      }));
+    saveCart();
+
+    const categories = [...new Set(productList.map((item) => item.category))]
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b));
+    const categoryFilter = document.getElementById("categoryFilter");
+    categories.forEach((category) => {
+      const option = document.createElement("option");
+      option.value = category;
+      option.textContent = category;
+      categoryFilter.appendChild(option);
+    });
     showCards();
   } catch (error) {
     console.error("Error fetching products:", error);
-    cardList.innerHTML = `<p style="grid-column:1/-1">Could not load the menu. Is the server running?</p>`;
+    cardList.innerHTML =
+      '<p class="menu-empty" role="alert">We could not load the menu right now. Please refresh to try again.</p>';
   }
+  document
+    .getElementById("menuSearch")
+    .addEventListener("input", showCards);
+  document
+    .getElementById("categoryFilter")
+    .addEventListener("change", showCards);
   renderCart();
   updateCartCount();
 };
@@ -281,17 +499,35 @@ const adminLink = document.getElementById("adminLink");
 const mobileOrdersItem = document.getElementById("mobileOrdersItem");
 const mobileAdminItem = document.getElementById("mobileAdminItem");
 const mobileOrdersBtn = document.getElementById("mobileOrdersBtn");
+const supportOrdersBtn = document.getElementById("supportOrdersBtn");
+
+document.getElementById("currentYear").textContent = new Date().getFullYear();
+
+supportOrdersBtn.addEventListener("click", (e) => {
+  e.preventDefault();
+  if (!getToken()) {
+    showToast("Sign in to view your orders.", "error");
+    openModal("login");
+    return;
+  }
+  setDrawerOpen(ordersTab, true);
+  loadOrders();
+});
 
 function openModal(defaultTab = "login") {
+  authModalReturnFocus = document.activeElement;
   authModal.setAttribute("aria-hidden", "false");
   document.body.style.overflow = "hidden";
   if (defaultTab === "signup") showSignup();
   else showLogin();
+  document.getElementById(defaultTab === "signup" ? "signupName" : "loginEmail").focus();
 }
 function closeModal() {
   authModal.setAttribute("aria-hidden", "true");
   document.body.style.overflow = "";
+  authModalReturnFocus?.focus?.();
 }
+let authModalReturnFocus = null;
 window.openModal = openModal;
 window.closeModal = closeModal;
 
@@ -345,14 +581,41 @@ switchToLogin2.addEventListener("click", (e) => { e.preventDefault(); showLogin(
 // Close controls
 authClose.addEventListener("click", (e) => { e.preventDefault(); closeModal(); });
 authModal.addEventListener("click", (e) => { if (e.target === authModal) closeModal(); });
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
+document.addEventListener("keydown", (e) => {
+  const modalOpen = authModal.getAttribute("aria-hidden") === "false";
+  if (e.key === "Escape") {
+    if (modalOpen) closeModal();
+    else if (ordersTab.classList.contains("cart-tab-active")) {
+      setDrawerOpen(ordersTab, false);
+    } else if (cartTab.classList.contains("cart-tab-active")) {
+      setDrawerOpen(cartTab, false);
+    }
+    return;
+  }
+  if (!modalOpen || e.key !== "Tab") return;
+  const focusable = [
+    ...authModal.querySelectorAll(
+      'button:not([disabled]), input:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
+    ),
+  ].filter((element) => element.offsetParent !== null);
+  if (!focusable.length) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (e.shiftKey && document.activeElement === first) {
+    e.preventDefault();
+    last.focus();
+  } else if (!e.shiftKey && document.activeElement === last) {
+    e.preventDefault();
+    first.focus();
+  }
+});
 
 // Mobile "My Orders"
 if (mobileOrdersBtn) {
   mobileOrdersBtn.addEventListener("click", (e) => {
     e.preventDefault();
-    mobileMenu.classList.remove("mobile-menu-active");
-    ordersTab.classList.add("cart-tab-active");
+    closeMobileMenu();
+    setDrawerOpen(ordersTab, true);
     loadOrders();
   });
 }
@@ -368,13 +631,13 @@ formSignup.addEventListener("submit", async (e) => {
       method: "POST",
       body: { name, email, password },
     });
-    setAuth(token, user);
+    if (!setAuth(token, user)) return;
     updateUIForLogin();
     closeModal();
     formSignup.reset();
-    alert(`Welcome, ${user.name}! Your account is ready.`);
+    showToast(`Welcome, ${user.name}! Your account is ready.`, "success");
   } catch (err) {
-    alert(err.message);
+    showToast(err.message, "error");
   }
 });
 
@@ -388,13 +651,13 @@ formLogin.addEventListener("submit", async (e) => {
       method: "POST",
       body: { email, password },
     });
-    setAuth(token, user);
+    if (!setAuth(token, user)) return;
     updateUIForLogin();
     closeModal();
     formLogin.reset();
-    alert(`Signed in as ${user.name}.`);
+    showToast(`Signed in as ${user.name}.`, "success");
   } catch (err) {
-    alert(err.message);
+    showToast(err.message, "error");
   }
 });
 
@@ -409,8 +672,12 @@ function updateUIForLogin() {
   const loggedIn = !!getToken() && !!user;
 
   if (loggedIn) {
-    signinBtn.innerHTML = `<i class="fa-solid fa-user"></i> ${user.name}`;
+    const icon = document.createElement("i");
+    icon.className = "fa-solid fa-user";
+    signinBtn.replaceChildren(icon, document.createTextNode(` ${user.name}`));
     signinBtn.setAttribute("title", "Click to log out");
+    mobileSigninBtn.textContent = `Sign out (${user.name})`;
+    mobileSigninBtn.setAttribute("title", "Sign out");
     if (ordersBtn) ordersBtn.classList.remove("hidden");
     if (mobileOrdersItem) mobileOrdersItem.classList.remove("hidden");
     const isAdmin = user.role === "admin";
@@ -420,6 +687,8 @@ function updateUIForLogin() {
     signinBtn.innerHTML = `<i class="fa-solid fa-user"></i> Sign in`;
     signinBtn.setAttribute("title", "Sign in");
     signinBtn.setAttribute("data-open", "login");
+    mobileSigninBtn.textContent = "Sign in";
+    mobileSigninBtn.setAttribute("title", "Sign in");
     if (ordersBtn) ordersBtn.classList.add("hidden");
     if (adminLink) adminLink.classList.add("hidden");
     if (mobileOrdersItem) mobileOrdersItem.classList.add("hidden");
@@ -437,7 +706,7 @@ async function restoreSession() {
   updateUIForLogin();
   try {
     const { user } = await apiFetch("/api/auth/me", { auth: true });
-    setAuth(getToken(), user); // refresh cached user (e.g. role changes)
+    if (!setAuth(getToken(), user)) return;
     updateUIForLogin();
   } catch (err) {
     // Drop the session only on a definitive client error (4xx: invalid/expired
@@ -467,21 +736,26 @@ async function initGoogleSignIn() {
     /* config endpoint unreachable — leave the fallback button in place */
   }
 
+  document.querySelectorAll(".google-fallback").forEach((btn) =>
+    btn.addEventListener("click", () =>
+      showToast(
+        clientId
+          ? "Google sign-in could not load. Please try again or use your email."
+          : "Google sign-in is not configured. Please use your email to sign in.",
+        "error",
+      ),
+    ),
+  );
+
   if (!clientId) {
-    document.querySelectorAll(".google-fallback").forEach((btn) =>
-      btn.addEventListener("click", () =>
-        alert(
-          "Google sign-in isn't set up yet.\nAdd GOOGLE_CLIENT_ID to the .env file and restart the server."
-        )
-      )
-    );
     return;
   }
 
   // The GIS script loads async; wait until it's ready, then wire it up.
-  (function whenReady() {
+  (function whenReady(attempt = 0) {
     if (!(window.google && google.accounts && google.accounts.id)) {
-      return setTimeout(whenReady, 100);
+      if (attempt < 50) setTimeout(() => whenReady(attempt + 1), 100);
+      return;
     }
     google.accounts.id.initialize({ client_id: clientId, callback: handleGoogleCredential });
     renderGoogleButton("googleLoginSlot", "signin_with");
@@ -510,12 +784,12 @@ async function handleGoogleCredential(response) {
       method: "POST",
       body: { credential: response.credential },
     });
-    setAuth(token, user);
+    if (!setAuth(token, user)) return;
     updateUIForLogin();
     closeModal();
-    alert(`Signed in as ${user.name}.`);
+    showToast(`Signed in as ${user.name}.`, "success");
   } catch (err) {
-    alert("Google sign-in failed: " + err.message);
+    showToast("Google sign-in failed: " + err.message, "error");
   }
 }
 
@@ -534,23 +808,23 @@ async function loadOrders() {
     }
     ordersList.innerHTML = orders.map(renderOrder).join("");
   } catch (err) {
-    ordersList.innerHTML = `<p class="orders-empty">${err.message}</p>`;
+    ordersList.innerHTML = `<p class="orders-empty">${escapeHtml(err.message)}</p>`;
   }
 }
 
 function renderOrder(o) {
   const items = o.items
-    .map((it) => `<li>${it.name} × ${it.quantity} <span>${rupee.format(it.price * it.quantity)}</span></li>`)
+    .map((it) => `<li>${escapeHtml(it.name)} × ${Number(it.quantity)} <span>${rupee.format(Number(it.price) * Number(it.quantity))}</span></li>`)
     .join("");
   return `
     <div class="order-history-item">
       <div class="order-history-head">
         <span class="order-id">Order #${o.id}</span>
-        <span class="order-status">${o.status}</span>
+        <span class="order-status">${escapeHtml(o.status)}</span>
       </div>
       <ul class="order-history-items">${items}</ul>
       <div class="order-history-foot">
-        <span>${o.created_at}</span>
+        <span>${escapeHtml(new Date(o.created_at).toLocaleString("en-IN"))}</span>
         <strong>${rupee.format(o.amount)}</strong>
       </div>
     </div>`;
@@ -561,17 +835,26 @@ function renderOrder(o) {
 // =========================================================================
 document.getElementById("payBtn").addEventListener("click", async function (e) {
   e.preventDefault();
+  if (this.disabled) return;
 
   if (cartproducts.length === 0) {
-    alert("Your cart is empty!");
+    showToast("Your cart is empty.", "error");
     return;
   }
   if (!getToken()) {
-    alert("Please sign in to place your order.");
+    showToast("Please sign in to place your order.", "error");
     openModal("login");
     return;
   }
 
+  const payButton = this;
+  const originalLabel = payButton.textContent;
+  const resetPayButton = () => {
+    payButton.disabled = false;
+    payButton.textContent = originalLabel;
+  };
+  payButton.disabled = true;
+  payButton.textContent = "Preparing checkout…";
   const items = cartproducts.map((i) => ({ id: i.id, quantity: i.quantity }));
 
   try {
@@ -602,22 +885,25 @@ document.getElementById("payBtn").addEventListener("click", async function (e) {
               razorpay_signature: response.razorpay_signature,
             },
           });
-          alert(`Payment successful! Order #${result.order_id} placed.`);
+          showToast(`Payment successful! Order #${result.order_id} placed.`, "success");
           cartproducts = [];
           saveCart();
           renderCart();
           updateCartCount();
-          cartTab.classList.remove("cart-tab-active");
+          setDrawerOpen(cartTab, false);
 
           // Show the freshly placed order straight away.
           if (ordersTab) {
-            ordersTab.classList.add("cart-tab-active");
+            setDrawerOpen(ordersTab, true);
             loadOrders();
           }
         } catch (err) {
-          alert("Payment verification failed: " + err.message);
+          showToast("Payment verification failed: " + err.message, "error");
+        } finally {
+          resetPayButton();
         }
       },
+      modal: { ondismiss: resetPayButton },
       prefill: {
         name: getUser()?.name || "",
         email: getUser()?.email || "",
@@ -625,18 +911,28 @@ document.getElementById("payBtn").addEventListener("click", async function (e) {
       theme: { color: "#f59e0b" },
     };
 
+    if (typeof window.Razorpay !== "function") {
+      throw new Error("Secure checkout could not be loaded. Please try again.");
+    }
     const rzp1 = new Razorpay(options);
     rzp1.on("payment.failed", (resp) =>
-      alert("Payment failed: " + (resp.error?.description || "Please try again."))
+      {
+        resetPayButton();
+        showToast(
+          "Payment failed: " + (resp.error?.description || "Please try again."),
+          "error",
+        );
+      }
     );
     rzp1.open();
   } catch (err) {
     if (/not configured/i.test(err.message)) {
-      alert(
+      showToast(
         "Payments are not set up yet.\nAdd your Razorpay TEST keys to the .env file and restart the server."
       );
     } else {
-      alert("Could not start payment: " + err.message);
+      showToast("Could not start payment: " + err.message, "error");
     }
+    resetPayButton();
   }
 });

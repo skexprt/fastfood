@@ -6,9 +6,10 @@ if (!process.env.DATABASE_URL) {
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false,
-  },
+  ssl:
+    process.env.DATABASE_SSL === "disable"
+      ? false
+      : { rejectUnauthorized: true },
 });
 
 async function query(text, params = []) {

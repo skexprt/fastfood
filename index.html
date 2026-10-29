@@ -4,7 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FastFood delivery</title>
+    <meta name="description" content="Fresh, delicious fast food delivered to your door. Explore the FastFood menu and order online.">
+    <meta name="theme-color" content="#fffdf8">
+    <title>FastFood — Fresh food, delivered fast</title>
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@12/swiper-bundle.min.css" />
 
@@ -19,7 +21,7 @@
     <!-- Header Section -->
     <header>
         <nav class="navbar flex between wrapper">
-            <a href="#" class="logo"> FastFood.</a>
+            <a href="#home" class="logo"> FastFood.</a>
 
             <!-- Destop Menu -->
             <ul class="nav-links flex gap-3">
@@ -30,9 +32,9 @@
                 <li><a href="#contact">Contact us</a></li>
             </ul>
             <div class="destop-action flex gap-2">
-                <a href="#" title="Shopping Bag" class="badge-container">
+                <a href="#" title="Shopping Bag" class="badge-container" aria-label="Open shopping cart">
                     <i class="fa-solid fa-bag-shopping"></i>
-                    <span class="badge-value">0</span>
+                    <span class="badge-value" aria-live="polite">0</span>
                 </a>
                 <a href="#" title="My Orders" id="ordersBtn" class="icon-action hidden">
                     <i class="fa-solid fa-receipt"></i>
@@ -40,18 +42,17 @@
                 <a href="admin.html" title="Admin panel" id="adminLink" class="btn admin-link hidden">
                     <i class="fa-solid fa-gauge-high"></i> Admin
                 </a>
-                <!-- NOTE: data-open="signup" makes this open the signup tab by default -->
-                <a href="#" id="signinBtn" class="btn" title="sign-in" data-open="signup">
+                <a href="#" id="signinBtn" class="btn" title="sign-in" data-open="login">
                     <i class="fa-solid fa-user"></i>
                     Sign in
                 </a>
-                <a class="menu-toggle">
+                <button type="button" class="menu-toggle" aria-label="Open navigation menu" aria-expanded="false" aria-controls="mobileMenu">
                     <i class="fa-solid fa-bars"></i>
-                </a>
+                </button>
             </div>
 
             <!-- Mobile Menu -->
-            <ul class="mobile-menu">
+            <ul class="mobile-menu" id="mobileMenu">
                 <li><a href="#home">Home</a></li>
                 <li><a href="#menu">Menu</a></li>
                 <li><a href="#service">Services</a></li>
@@ -83,16 +84,16 @@
                     <div class="order-btn flex gap-1-half">
                         <a href="#menu" class="btn">Order Now</a>
 
-                        <a href="https://x.com/Sr5210095Raj" title="social-logo" class="social-icons">
+                        <a href="https://x.com/Sr5210095Raj" aria-label="Visit the X profile" class="social-icons">
                             <i class="fa-brands fa-x-twitter"></i>
                         </a>
-                        <a href="https://www.instagram.com/sk_exprt/" title="social-logo" class="social-icons">
+                        <a href="https://www.instagram.com/sk_exprt/" aria-label="Visit the Instagram profile" class="social-icons">
                             <i class="fa-brands fa-instagram"></i>
                         </a>
-                        <a href="https://www.google.com/" title="social-logo" class="social-icons">
+                        <a href="https://www.google.com/" aria-label="Search Google" class="social-icons">
                             <i class="fa-brands fa-google"></i>
                         </a>
-                        <a href="https://www.facebook.com/profile.php?id=100078621638909" title="social-logo"
+                        <a href="https://www.facebook.com/profile.php?id=100078621638909" aria-label="Visit the Facebook profile"
                             class="social-icons">
                             <i class="fa-brands fa-facebook-f"></i>
                         </a>
@@ -118,7 +119,7 @@
                     <div class="service-card">
                         <div class="images-container">
 
-                            <img src="images/easy-to-order.png" alt="">
+                            <img src="images/easy-to-order.png" alt="" loading="lazy" decoding="async">
                         </div>
                         <h3>Easy-to-Order</h3>
                         <p> You only need a few steps in <br> ordering food
@@ -129,7 +130,7 @@
                     <div class="service-card">
                         <div class="images-container">
 
-                            <img src="images/best-quality.png" alt="">
+                            <img src="images/best-quality.png" alt="" loading="lazy" decoding="async">
                         </div>
                         <h3>Best-Quality</h3>
                         <p>
@@ -140,7 +141,7 @@
 
                     <div class="service-card">
                         <div class="images-container">
-                            <img src="images/fast-delivery.png" alt="">
+                            <img src="images/fast-delivery.png" alt="" loading="lazy" decoding="async">
                         </div>
                         <h3>Fast-Delivery</h3>
                         <p>
@@ -160,10 +161,20 @@
 
                     <h5>Our Menu</h5>
                     <h2 class="section-title">The Most Popular</h2>
+                    <p class="section-subtitle">Made fresh, packed with flavor, and ready for your next craving.</p>
+                </div>
+
+                <div class="menu-tools wrapper" role="search">
+                    <label class="sr-only" for="menuSearch">Search the menu</label>
+                    <input id="menuSearch" type="search" maxlength="80" placeholder="Search dishes..." autocomplete="off">
+                    <label class="sr-only" for="categoryFilter">Filter by category</label>
+                    <select id="categoryFilter">
+                        <option value="">All categories</option>
+                    </select>
                 </div>
 
                 <div class="card-list text-center flex mt-4 gap-2">
-
+                    <p class="menu-empty" role="status">Loading menu…</p>
                     <!-- <div class="order-card">
                         <div class="card-item">
                             <img src="images/burger.png" alt="">
@@ -177,9 +188,9 @@
 
                 <!-- Cart Tab -->
 
-                <div class="cart-tab">
-                    <h3>Your Card</h3>
-                    <div class="cart-list">
+                <aside class="cart-tab" aria-label="Shopping cart" aria-hidden="true" inert>
+                    <h3>Your cart</h3>
+                    <div class="cart-list" aria-live="polite">
 
                         <!-- <div class="cart-item">
                             <div class="item-image ">
@@ -208,24 +219,24 @@
                     </div>
                     <div class="btn-container m-auto flex ">
 
-                        <a href="#" class="btn close-btn">Close</a>
-                        <a href="#" class="btn" id="payBtn">Checkout Now</a>
+                        <button type="button" class="btn close-btn">Close</button>
+                        <button type="button" class="btn" id="payBtn">Checkout now</button>
 
                     </div>
 
 
-                </div>
+                </aside>
 
                 <!-- Orders Tab (slide-in) -->
-                <div class="orders-tab">
+                <aside class="orders-tab" aria-label="Order history" aria-hidden="true" inert>
                     <h3>My Orders</h3>
-                    <div class="orders-list">
+                    <div class="orders-list" aria-live="polite">
                         <!-- filled by JS -->
                     </div>
                     <div class="btn-container m-auto flex">
-                        <a href="#" class="btn orders-close-btn">Close</a>
+                        <button type="button" class="btn orders-close-btn">Close</button>
                     </div>
-                </div>
+                </aside>
 
             </div>
         </section>
@@ -233,7 +244,7 @@
         <section id="about">
             <div class="wrapper p-top flex gap-3 align-center">
                 <div class="image-container">
-                    <img src="images/delivery-boy-with-phone.png" alt="Delivery partner using FastFood app">
+                    <img src="images/delivery-boy-with-phone.png" alt="Delivery partner using FastFood app" loading="lazy" decoding="async">
                 </div>
 
                 <div class="review-container">
@@ -245,7 +256,7 @@
                             <div class="swiper-slide">
                                 <div class="flex gap-2">
                                     <div class="profile">
-                                        <img src="images/profile1.jpeg.jpg" alt="">
+                                        <img src="images/profile1.jpeg.jpg" alt="" loading="lazy" decoding="async">
                                     </div>
                                     <div>
                                         <h4 class="profile-name">Shiva Rajbhar</h4>
@@ -265,7 +276,7 @@
                             <div class="swiper-slide">
                                 <div class="flex gap-2">
                                     <div class="profile">
-                                        <img src="images/Sunil.jpg" alt="">
+                                        <img src="images/Sunil.jpg" alt="" loading="lazy" decoding="async">
                                     </div>
                                     <div>
                                         <h4 class="profile-name">Sunil Yadav</h4>
@@ -286,7 +297,7 @@
                             <div class="swiper-slide">
                                 <div class="flex gap-2">
                                     <div class="profile">
-                                        <img src="images/profile2.jpeg" alt="">
+                                        <img src="images/profile2.jpeg" alt="" loading="lazy" decoding="async">
                                     </div>
                                     <div>
                                         <h4 class="profile-name">Neetu Jaiswal</h4>
@@ -308,7 +319,7 @@
                             <div class="swiper-slide">
                                 <div class="flex gap-2">
                                     <div class="profile">
-                                        <img src="images/vimlesh.jpg" alt="">
+                                        <img src="images/vimlesh.jpg" alt="" loading="lazy" decoding="async">
                                     </div>
                                     <div>
                                         <h4 class="profile-name">Vimlesh</h4>
@@ -330,7 +341,7 @@
                             <div class="swiper-slide">
                                 <div class="flex gap-2">
                                     <div class="profile">
-                                        <img src="images/vimlesh.jpg" alt="">
+                                        <img src="images/vimlesh.jpg" alt="" loading="lazy" decoding="async">
                                     </div>
                                     <div>
                                         <h4 class="profile-name">Satyendra</h4>
@@ -369,16 +380,14 @@
                 <div class="app-container flex between">
 
                     <div class="image-container">
-                        <img src="images/mobile-app.png" alt="">
+                        <img src="images/mobile-app.png" alt="" loading="lazy" decoding="async">
                     </div>
                     <div class="content">
-                        <h5>Our Application</h5>
-                        <h2>Simple Way To <br> Order your Food</h2>
-                        <p class="para"> discover the convenience of our food delivery app.
-                            Browse menus, place orders, and track deliveries
-                            all from your mobile device.
+                        <h5>Order anywhere</h5>
+                        <h2>Good food, just a few clicks away</h2>
+                        <p class="para">Browse the menu, build your cart, and check out securely from any device.
                         </p>
-                        <a href="#" class="btn" title="mobile-app-botton">Get the App</a>
+                        <p class="app-availability">Mobile app coming soon. Order directly from this website in the meantime.</p>
                     </div>
                 </div>
 
@@ -388,18 +397,12 @@
         <section id="contact">
             <div class="wrapper p-top">
                 <div class="newsletter text-center">
-                    <h5>Our subscribe</h5>
-                    <h2 class="section-title text-center">Subscribe to get latest news</h2>
+                    <h5>Order support</h5>
+                    <h2 class="section-title text-center">Need help with an order?</h2>
                     <p class="para m-auto">
-                        Subscribe to our newsletter and stay updated with the latest news, exclusive offers, and
-                        delicious recipes delivered straight to your inbox.
+                        Sign in to review your recent orders and payment details.
                     </p>
-
-                    <div class="input-container flex ">
-                        <input type="email" name="email" id="email" placeholder="Enter your email address"
-                            autocomplete="off">
-                        <a href="#" class="btn" title="subscribe-btn">Subscribe</a>
-                    </div>
+                    <a href="#contact" id="supportOrdersBtn" class="btn">View my orders</a>
                 </div>
             </div>
         </section>
@@ -412,25 +415,11 @@
         <div class="footer-container wrapper">
             <div class="wrapper flex gap-4 ">
                 <div class="footer-wrapper">
-                    <a href="#" class="logo"> FastFood.</a>
+                    <a href="#home" class="logo"> FastFood.</a>
                     <p class="mt-one-half">
                         We will fill your tummy with delicious <br>
                         food with fast delivery.
                     </p>
-                    <div class=" flex gap-1 mt-one-half">
-                        <a href="#" title="social-logo" class="social-icons">
-                            <i class="fa-brands fa-x-twitter"></i>
-                        </a>
-                        <a href="#" title="social-logo" class="social-icons">
-                            <i class="fa-brands fa-instagram"></i>
-                        </a>
-                        <a href="#" title="social-logo" class="social-icons">
-                            <i class="fa-brands fa-google"></i>
-                        </a>
-                        <a href="#" title="social-logo" class="social-icons">
-                            <i class="fa-brands fa-facebook-f"></i>
-                        </a>
-                    </div>
                 </div>
 
                 <ul class="footer-wrapper">
@@ -438,13 +427,13 @@
                         <h3>Our Menu </h3>
                     </li>
                     <li class="mt-one-half">
-                        <a href="#" class="footer-link">Special </a>
+                        <a href="#menu" class="footer-link">Special </a>
                     </li>
                     <li class="mt-one-half">
-                        <a href="#" class="footer-link">Popular </a>
+                        <a href="#menu" class="footer-link">Popular </a>
                     </li>
                     <li class="mt-one-half">
-                        <a href="#" class="footer-link"> Category </a>
+                        <a href="#service" class="footer-link">How it works</a>
                     </li>
                 </ul>
 
@@ -454,16 +443,16 @@
                         <h3>Company </h3>
                     </li>
                     <li class="mt-one-half">
-                        <a href="#" class="footer-link">Why foodie </a>
+                        <a href="#service" class="footer-link">Why FastFood</a>
                     </li>
                     <li class="mt-one-half">
-                        <a href="#" class="footer-link">Partner with us </a>
+                        <a href="#contact" class="footer-link">Order support</a>
                     </li>
                     <li class="mt-one-half">
-                        <a href="#" class="footer-link"> About us </a>
+                        <a href="#about" class="footer-link">About us</a>
                     </li>
                     <li class="mt-one-half">
-                        <a href="#" class="footer-link"> FAQ's </a>
+                        <a href="#contact" class="footer-link">Order help</a>
                     </li>
                 </ul>
 
@@ -473,21 +462,21 @@
                         <h3>Support</h3>
                     </li>
                     <li class="mt-one-half">
-                        <a href="#" class="footer-link">Account </a>
+                        <a href="#contact" class="footer-link">Account & orders</a>
                     </li>
                     <li class="mt-one-half">
-                        <a href="#" class="footer-link">Support Center </a>
+                        <a href="#contact" class="footer-link">Support center</a>
                     </li>
                     <li class="mt-one-half">
-                        <a href="#" class="footer-link"> Feedback </a>
+                        <a href="#contact" class="footer-link">Feedback</a>
                     </li>
                     <li class="mt-one-half">
-                        <a href="#" class="footer-link"> Contact us</a>
+                        <a href="#contact" class="footer-link">Contact</a>
                     </li>
                 </ul>
 
             </div>
-            <p class="text-center mt-3"> &copy; 2025 FastFood. All rights reserved. </p>
+            <p class="text-center mt-3"> &copy; <span id="currentYear"></span> FastFood. All rights reserved. </p>
         </div>
     </footer>
 
@@ -511,9 +500,8 @@
                     <!-- Sign in form -->
                     <form id="formLogin" class="form-card" autocomplete="off">
                         <h3 id="authTitle">Sign in</h3>
-                        <input id="loginEmail" type="email" placeholder="Email" required>
-                        <input id="loginPassword" type="password" placeholder="Password" required>
-                        <label class="remember-row"><input type="checkbox" id="rememberMe"> Remember me</label>
+                        <input id="loginEmail" type="email" placeholder="Email" aria-label="Email address" autocomplete="email" required>
+                        <input id="loginPassword" type="password" placeholder="Password" aria-label="Password" autocomplete="current-password" required>
                         <button class="full-btn" type="submit">Sign in</button>
 
                         <div class="or-box">
@@ -534,11 +522,9 @@
                     <!-- Signup form -->
                     <form id="formSignup" class="form-card hidden" autocomplete="off">
                         <h3>Create account</h3>
-                        <input id="signupName" type="text" placeholder="Full name" required>
-                        <input id="signupEmail" type="email" placeholder="Email" required>
-                        <input id="signupPassword" type="password" placeholder="Password" required>
-                        <label class="remember-row"><input type="checkbox" id="agreeTerms"> I agree to Terms &
-                            Privacy</label>
+                        <input id="signupName" type="text" placeholder="Full name" aria-label="Full name" autocomplete="name" maxlength="80" required>
+                        <input id="signupEmail" type="email" placeholder="Email" aria-label="Email address" autocomplete="email" maxlength="254" required>
+                        <input id="signupPassword" type="password" placeholder="Password (at least 8 characters)" aria-label="Password, at least 8 characters" autocomplete="new-password" minlength="8" maxlength="72" required>
                         <button class="full-btn" type="submit">Create account</button>
 
                         <div class="or-box">
@@ -561,6 +547,7 @@
     </div>
     <!-- END AUTH MODAL -->
 
+    <div id="appToast" class="app-toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
 
     <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/js/all.min.js"

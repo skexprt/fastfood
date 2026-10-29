@@ -151,7 +151,7 @@ async function loadProducts() {
     products.forEach((p) => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td><img class="thumb" src="${p.image}" alt="${escapeHtml(p.name)}"></td>
+        <td><img class="thumb" src="${escapeHtml(safeImageUrl(p.image))}" alt="${escapeHtml(p.name)}" loading="lazy"></td>
         <td>${escapeHtml(p.name)}</td>
         <td>${rupee.format(p.price)}</td>
         <td>${escapeHtml(p.category)}</td>
@@ -236,7 +236,22 @@ function escapeHtml(str) {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function safeImageUrl(value) {
+  if (typeof value !== "string") return "images/burger.png";
+  if (/^\/?images\/[A-Za-z0-9._/-]+$/.test(value) && !value.includes("..")) {
+    return value.replace(/^\/+/, "");
+  }
+  try {
+    const url = new URL(value, window.location.origin);
+    if (url.protocol === "https:" && !url.username && !url.password) return url.href;
+  } catch {
+    return "images/burger.png";
+  }
+  return "images/burger.png";
 }
 
 // ---- Boot ----

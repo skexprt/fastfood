@@ -6,9 +6,8 @@ node_modules/
 
 # Secrets
 .env
-.env.example
 
-# SQLite database (created at runtime, contains user data)
+# Local database files (may contain user data)
 server/data.db
 server/data.db-shm
 server/data.db-wal

@@ -87,6 +87,16 @@ async function seedAdmin() {
       "ADMIN_EMAIL and ADMIN_PASSWORD are required."
     );
   }
+  if (
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
+    email.length > 254 ||
+    Buffer.byteLength(password, "utf8") < 16 ||
+    Buffer.byteLength(password, "utf8") > 72
+  ) {
+    throw new Error(
+      "Use a valid ADMIN_EMAIL and an ADMIN_PASSWORD of 16–72 bytes."
+    );
+  }
 
   const existing = await query(
     "SELECT id FROM users WHERE email = $1",
