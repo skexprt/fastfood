@@ -1,3 +1,4 @@
+
 const { Pool } = require("pg");
 
 if (!process.env.DATABASE_URL) {
@@ -6,10 +7,16 @@ if (!process.env.DATABASE_URL) {
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl:
-    process.env.DATABASE_SSL === "disable"
-      ? false
-      : { rejectUnauthorized: true },
+
+  // Render PostgreSQL SSL configuration
+  ssl: {
+    rejectUnauthorized: false,
+  },
+
+  // Connection stability settings
+  connectionTimeoutMillis: 10000,
+  idleTimeoutMillis: 30000,
+  max: 10,
 });
 
 async function query(text, params = []) {
