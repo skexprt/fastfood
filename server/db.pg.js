@@ -71,3 +71,12 @@ module.exports = {
   query,
   initDatabase,
 };
+
+
+
+
+
+
+
+
+// postgresql://fastfood_91ln_user:G2q9iFIutZHdEg7WKCyNRDMjWhafbNOW@dpg-da7bp22d0e5s73e2ggtg-a.singapore-postgres.render.com/fastfood_91ln

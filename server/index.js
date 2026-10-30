@@ -16,7 +16,7 @@ const bcrypt = require("bcryptjs");
 const Razorpay = require("razorpay");
 const { OAuth2Client } = require("google-auth-library");
 
-const { query, pool } = require("./db.pg");
+const { query, pool, initDatabase } = require("./db.pg");
 const { signToken, publicUser, authMiddleware, adminOnly } = require("./auth");
 
 const app = express();
@@ -918,15 +918,31 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: "Internal server error" });
 });
 
-const server = app.listen(PORT, () => {
-  console.log(`\n🍔 FastFood server running at http://localhost:${PORT}`);
-  console.log(
-    `   Razorpay: ${razorpay ? "configured ✓" : "NOT configured (add keys to .env)"}`,
-  );
-  console.log(
-    `   Google sign-in: ${googleClient ? "configured ✓" : "NOT configured (add GOOGLE_CLIENT_ID to .env)"}`,
-  );
-});
+let server;
+
+async function startServer() {
+  try {
+    await initDatabase();
+
+    console.log("PostgreSQL database initialized successfully.");
+
+    server = app.listen(PORT, () => {
+      console.log(`\n🍔 FastFood server running at http://localhost:${PORT}`);
+      console.log(
+        `   Razorpay: ${razorpay ? "configured ✓" : "NOT configured (add keys to .env)"}`
+      );
+      console.log(
+        `   Google sign-in: ${googleClient ? "configured ✓" : "NOT configured (add GOOGLE_CLIENT_ID to .env)"}`
+      );
+    });
+  } catch (error) {
+    console.error("Database initialization failed:", error);
+    process.exit(1);
+  }
+}
+
+startServer();
+
 
 function shutdown(signal) {
   console.log(`[server] ${signal} received; closing gracefully`);
