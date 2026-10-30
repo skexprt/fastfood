@@ -31,7 +31,7 @@ const allowedOrigins = new Set(
 );
 
 app.disable("x-powered-by");
-app.set("trust proxy", process.env.TRUST_PROXY === "true" ? 1 : false);
+app.set("trust proxy", 1);
 app.use(
   helmet({
     contentSecurityPolicy: {
